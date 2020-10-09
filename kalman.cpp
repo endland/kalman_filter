@@ -1,9 +1,7 @@
 /**
-* Implementation of KalmanFilter class.
-*
-* @author: Hayk Martirosyan
-* @date: 2014.11.15
-*/
+ * Simple Linear Kalman-filter example
+ *
+ */
 
 #include <iostream>
 #include <stdexcept>
@@ -13,12 +11,12 @@
 KalmanFilter::KalmanFilter(
     double dt,
     const Eigen::MatrixXd& A, // F
-    const Eigen::MatrixXd& C, // H 
+    const Eigen::MatrixXd& H, // H 
     const Eigen::MatrixXd& Q, // Q
     const Eigen::MatrixXd& R, // R
     const Eigen::MatrixXd& P) // P
-  : A(A), C(C), Q(Q), R(R), P0(P),
-    m(C.rows()), n(A.rows()), dt(dt), initialized(false),
+  : A(A), H(H), Q(Q), R(R), P0(P),
+    m(H.rows()), n(A.rows()), dt(dt), initialized(false),
     I(n, n), x_hat(n), x_hat_new(n)  // constructor member initializer lists
 {
   I.setIdentity();
@@ -51,9 +49,9 @@ void KalmanFilter::update(const Eigen::VectorXd& y) {
 
   x_hat_new = A * x_hat;                                  // XPred = F*X
   P = A*P*A.transpose() + Q;                              // PPred = F*P*F' + Q
-  K = P*C.transpose()*(C*P*C.transpose() + R).inverse();  // K = PPred*H'/S, S = C*P*C' + R, 
-  x_hat_new += K * (y - C*x_hat_new);                     // XEst = XPred + K*y, y=z-H*XPred
-  P = (I - K*C)*P;                                        // PEst = (I - K*H)*PPred, P = PEst
+  K = P*H.transpose()*(H*P*H.transpose() + R).inverse();  // K = PPred*H'/S, S = C*P*C' + R, 
+  x_hat_new += K * (y - H*x_hat_new);                     // XEst = XPred + K*y, y=z-H*XPred
+  P = (I - K*H)*P;                                        // PEst = (I - K*H)*PPred, P = PEst
   x_hat = x_hat_new;
 
   t += dt;

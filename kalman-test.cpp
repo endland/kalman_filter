@@ -1,8 +1,6 @@
 /**
- * Test for the KalmanFilter class with 1D projectile motion.
+ * Simple Linear Kalman-filter example
  *
- * @author: Hayk Martirosyan
- * @date: 2014.11.15
  */
 
 #include <iostream>
@@ -67,9 +65,9 @@ int main(int argc, char* argv[]) {
 
   vector<double> rads;
   vector<double> Sdata_ans;        //True data
-  vector<double> Sdata;            //True data + noise
+  vector<double> Sdata;            //True data + noise (measurement data)
   vector<double> Sdata_kf;         //kalman filtered data
-  vector<double> noise;
+  vector<double> noise;            //Gaussian noise
 
   ScatterPlotSeries *sp_true = GetDefaultScatterPlotSeriesSettings();
 
@@ -87,7 +85,7 @@ int main(int argc, char* argv[]) {
   true_setting->autoBoundaries = true;
   true_setting->autoPadding = true;
   true_setting->title = toVector(L"Sensor_Data");
-  true_setting->xLabel = toVector(L"Amplitude");
+  true_setting->xLabel = toVector(L"Position");
   true_setting->yLabel = toVector(L"Time");
   true_setting->scatterPlotSeries->push_back(sp_true);
 
@@ -136,44 +134,43 @@ int main(int argc, char* argv[]) {
 
 
   //int n = 3; // Number of states
-  int n = 2; // Number of states
+  int n = 2; // Number of states      x = [r, v]
   int m = 1; // Number of measurements
 
   //double dt = 1.0/50; // Time step
   double dt = M_PI/180; // Time step
 
-  Eigen::MatrixXd A(n, n); // System dynamics matrix
-  Eigen::MatrixXd C(m, n); // Output matrix
-  Eigen::MatrixXd Q(n, n); // Process noise covariance
-  Eigen::MatrixXd R(m, m); // Measurement noise covariance
-  Eigen::MatrixXd P(n, n); // Estimate error covariance
+  Eigen::MatrixXd A(n, n); // System dynamics matrix,       2*2
+  Eigen::MatrixXd H(m, n); // Measurement matrix,           1*2
+  Eigen::MatrixXd Q(n, n); // Process noise covariance,     2*2
+  Eigen::MatrixXd R(m, m); // Measurement noise covariance, 1*1
+  Eigen::MatrixXd P(n, n); // Estimate error covariance,    2*2
 
-  // Discrete LTI projectile motion, measuring position only
-  //A << 1, dt, 0, 0, 1, dt, 0, 0, 1;               // F
-  A << 1, dt, 0, 1;               // F
-  //C << 1, 0, 0;                                   // H
-  C << 1, 0;                                   // H
+  A << 1, dt, 0, 1;               // A = [1, dt
+                                  //      0, 1]
+  
+  H << 1, 0;                                   // H = [1, 0]
 
   // Reasonable covariance matrices
-  //Q << .05, .05, .05, .05;
   Q << pow(.01, 2), pow(.01, 2), pow(.01, 2), pow(.01, 2);
-  //R << 0.5;
+  
   R << pow(0.1, 2);
   //P << .1, .1, .1, .1;
-  P << 0., 1., 0., 0.;
+  P << 0., 1., 0., 0.;                // P = [0, 1
+                                      //      0, 0]
 
   std::cout << "A: \n" << A << std::endl;
-  std::cout << "C: \n" << C << std::endl;
+  std::cout << "H: \n" << H << std::endl;
   std::cout << "Q: \n" << Q << std::endl;
   std::cout << "R: \n" << R << std::endl;
   std::cout << "P: \n" << P << std::endl;
 
   // Construct the filter
-  KalmanFilter kf(dt, A, C, Q, R, P);
+  KalmanFilter kf(dt, A, H, Q, R, P);
   
-  Eigen::VectorXd x0(n);
+  Eigen::VectorXd x0(n);           // x = [r, v], 1*2
   
-  x0 << Sdata[0], 0;
+  x0 << Sdata[0], 0;               // set initial state with first measurement data
   cout<<"x0 = "<<x0<<endl;
  
   kf.init(0, x0);
@@ -181,29 +178,25 @@ int main(int argc, char* argv[]) {
   // Feed measurements into filter, output estimated states
   double t = 0;
   Eigen::VectorXd y(m);
-  //cout<<"sin(30deg)"<<sin(0.52359877)<<endl;
-  //std::cout << "t = " << t << ", " << "x_hat[0]: " << kf.state().transpose() << std::endl;
-  //for(int i = 0; i < measurements.size(); i++) {
+
   for(int i = 0; i < Sdata.size(); i++) {
     t += dt;
-    //y << measurements[i];
     y << Sdata[i];
     kf.update(y);
-    //std::cout << "t = " << t << ", " << "y[" << i << "] = " << y.transpose()<< ", x_hat[" << i << "] = " << kf.state().transpose()[0] << std::endl;
     Sdata_kf.push_back(kf.state().transpose()[0]);
   }
 
   RGBABitmapImageReference *imageRef = CreateRGBABitmapImageReference();
   RGBABitmapImage *combined = CreateImage(WIDTH, HEIGHT, GetWhite());
-  RGBABitmapImage *ans, *sensor;
+  RGBABitmapImage *result;
 
   DrawScatterPlotFromSettings(imageRef, true_setting);
-  ans = imageRef->image;
+  result = imageRef->image;
 
-  DrawImageOnImage(combined, ans, 0, 0);
+  DrawImageOnImage(combined, result, 0, 0);
 
   vector<double> *pngData = ConvertToPNG(combined);
-  WriteToFile(pngData, "plot_cpp.png");
+  WriteToFile(pngData, "plot_true_measurement_kf.png");
   DeleteImage(imageRef->image);
 
   return 0;

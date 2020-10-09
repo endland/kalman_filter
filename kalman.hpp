@@ -1,12 +1,7 @@
 /**
-* Kalman filter implementation using Eigen. Based on the following
-* introductory paper:
-*
-*     http://www.cs.unc.edu/~welch/media/pdf/kalman_intro.pdf
-*
-* @author: Hayk Martirosyan
-* @date: 2014.11.15
-*/
+ * Simple Linear Kalman-filter example
+ *
+ */
 
 
 #include <Eigen/Dense>
@@ -19,8 +14,8 @@ public:
 
   /** constructor
   * Create a Kalman filter with the specified matrices.
-  *   A - System dynamics matrix
-  *   C - Output matrix
+  *   A - System dynamics matrix (State space matrix)
+  *   H - Measurement(Observation) matrix
   *   Q - Process noise covariance
   *   R - Measurement noise covariance
   *   P - Estimate error covariance
@@ -28,7 +23,7 @@ public:
   KalmanFilter(
       double dt,
       const Eigen::MatrixXd& A,
-      const Eigen::MatrixXd& C,
+      const Eigen::MatrixXd& H,
       const Eigen::MatrixXd& Q,
       const Eigen::MatrixXd& R,
       const Eigen::MatrixXd& P
@@ -70,7 +65,7 @@ public:
 private:
 
   // Matrices for computation
-  Eigen::MatrixXd A, C, Q, R, P, K, P0;
+  Eigen::MatrixXd A, H, Q, R, P, K, P0;
 
   // System dimensions
   int m, n;
@@ -89,4 +84,5 @@ private:
 
   // Estimated states
   Eigen::VectorXd x_hat, x_hat_new;
+  
 };
